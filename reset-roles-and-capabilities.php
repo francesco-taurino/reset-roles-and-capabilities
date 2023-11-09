@@ -3,9 +3,8 @@
  * Plugin Name:       Reset Roles and Capabilities
  * Plugin URI:        https://wordpress.org/plugins/reset-roles-and-capabilities/
  * Description:       Reset Roles and Capabilities to WordPress defaults
- * Version:           1.4
- * Requires at least: 2.8.0
- * Requires PHP:      5.6
+ * Version:           2.6
+ * Requires at least: 2.9
  * Author:            Francesco Taurino
  * Author URI:        https://profiles.wordpress.org/francescotaurino/
  * License:           GPL v2 or later
@@ -15,9 +14,8 @@
  * @copyright Copyright (c) 2018, Francesco Taurino
  */
 namespace ResetRolesAndCapabilities;
-
 /**
- * Transient Name
+ * Transient Name & Plugin Slug
  */
 const TRANSIENT_NAME = 'reset-roles-and-capabilities';
 
@@ -39,7 +37,7 @@ register_activation_hook( __FILE__, function ()
 	}
 
 	if (!isset($wp_roles)) {
-		$wp_roles = new WP_Roles();
+		$wp_roles = new \WP_Roles();
 	}
 
 	foreach ($wp_roles->roles as $role_name => $role_info):
@@ -72,28 +70,42 @@ register_activation_hook( __FILE__, function ()
 
 	/**
 	 * Set a transient to show a success message
-	 */
+	 */	
 	set_transient(TRANSIENT_NAME, __('Roles and Capabilities have been reset to WordPress defaults. The plugin has been deactivated.', 'reset-roles-and-capabilities'), TRANSIENT_TIME);
- 
+
 });
+
+ 
+/**
+ * Back compatibility 
+ * WordPress < 4.6
+ * @link https://developer.wordpress.org/plugins/internationalization/how-to-internationalize-your-plugin/#loading-text-domain
+ */
+add_action( 'plugins_loaded', function() 
+{
+	load_plugin_textdomain( TRANSIENT_NAME, FALSE, basename( dirname( __FILE__ ) ) . '/languages/'  );
+});
+
 
 /**
  * Hide default admin notice on plugin activation
  */
-add_action( 'admin_head', function() {
+add_action( 'admin_head', function() 
+{
 	echo '<style>#message { display: none !important; }</style>';
 });
 
 /**
  * Show a message after activation and then delete the transient
  */
-add_action('admin_notices', function () {
+add_action('admin_notices', function () 
+{
 
 	if ($text = get_transient(TRANSIENT_NAME)) {
 		
-		printf('<div class="%1$s"><p>%2$s</p></div>', 
+		printf('<div class="%1$s"><p style="font-size:28px;">%2$s</p></div>', 
 			'notice notice-success is-dismissible', 
-			esc_html($text) 
+			wp_kses_post($text) 
 		);
 	
 		delete_transient(TRANSIENT_NAME);
@@ -105,6 +117,7 @@ add_action('admin_notices', function () {
 /**
  * Deactivate the plugin
  */
-add_action('admin_init', function () {
+add_action('admin_init', function () 
+{
 	deactivate_plugins(plugin_basename(__FILE__));
 }, 0);
